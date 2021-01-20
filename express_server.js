@@ -6,8 +6,13 @@ const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
 
 function generateRandomString() {
-
-}
+  let final = '';
+  const possibleChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxzy';
+  for (let i = 0; i < 6; i++) {
+    final += possibleChars.charAt(Math.floor(Math.random() * possibleChars.length));
+  }
+  return final;
+};
 
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
@@ -18,9 +23,16 @@ app.get("/urls/new", (req, res) => {
   res.render("urls_new");
 });
 
+app.get("/u/:shortURL", (req, res) => {
+  const longURL = urlDatabase[req.params.shortURL];
+  res.redirect(longURL);
+});
+
 app.post("/urls", (req, res) => {
-  console.log(req.body);  // Log the POST request body to the console
-  res.send("Ok");         // Respond with 'Ok' (we will replace this)
+  const short = generateRandomString();
+  urlDatabase[short] = req.body.longURL;
+  console.log(urlDatabase);  // Log the POST request body to the console
+  res.redirect(`/urls/${short}`);        // Respond with 'Ok' (we will replace this)
 });
 
 app.get("/urls", (req, res) => {
