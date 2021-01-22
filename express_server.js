@@ -2,11 +2,19 @@ const express = require("express");
 const app = express();
 const PORT = 8080;
 const bodyParser = require("body-parser");
-const cookieParser = require('cookie-parser');
+// const cookieParser = require('cookie-parser');
+const cookieSession = require('cookie-session')
 const bcrypt = require('bcrypt');
-app.use(cookieParser());
+// app.use(cookieParser());
 app.use(bodyParser.urlencoded({extended: true}));
 app.set("view engine", "ejs");
+app.use(cookieSession({
+  name: 'user_id',
+  keys: ['lalala'],
+
+  // Cookie Options
+  maxAge: 24 * 60 * 60 * 1000 // 24 hours
+}))
 
 // checking if email exists, returns the ID if it does.
 const checkEmail = function check(email) {
@@ -68,7 +76,7 @@ app.post("/login", (req, res) => {
     return res.status(403).send('403 Forbidden: Incorrect username and/or password');
   } else {
     if (bcrypt.compareSync(password, users[check].password)) {
-      res.cookie("user_id", check);
+      req.session.user_id = check;
       res.redirect('/urls');
     } else {
       res.status(403).send('403 Forbidden: Incorrect username and/or password');
@@ -95,7 +103,7 @@ app.post("/register", (req, res) => {
   }
   console.log(newUser);
   users[newUser.id] = newUser;
-  res.cookie("user_id", newUser.id);
+  req.session.user_id = newUser.id;
   res.redirect('/urls');
 });
 
@@ -103,7 +111,7 @@ app.post("/urls", (req, res) => {
   const short = generateRandomString();
   const newURL = {
     longURL: req.body.longURL,
-    userID: req.cookies["user_id"]
+    userID: req.session.user_id
   }
   urlDatabase[short] = newURL;
   // console.log(urlDatabase)
@@ -112,7 +120,7 @@ app.post("/urls", (req, res) => {
 
 // update to make it so only users can edit their own links
 app.post("/urls/:shortURL", (req, res) => {
-  const id = req.cookies["user_id"];
+  const id = req.session.user_id;
   const shortURL = req.params.shortURL
   if (id !== urlDatabase[shortURL].userID) {
     return res.status(401).send('Not authorized: This is not your link!');
@@ -124,7 +132,7 @@ app.post("/urls/:shortURL", (req, res) => {
 
 // update to make it so only users can delete their own links
 app.post("/urls/:shortURL/delete", (req, res) => {
-  const id = req.cookies["user_id"];
+  const id = req.session.user_id;
   const shortURL = req.params.shortURL
   if (id !== urlDatabase[shortURL].userID) {
     return res.status(401).send('Not authorized: This is not your link!');
@@ -135,12 +143,12 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 });
 
 app.post("/logout", (req, res) => {
-  res.clearCookie("user_id", req.body.user_id)
+  req.session = null;
   res.redirect('/urls');
 });
 
 app.get("/login", (req, res) => {
-  const id = req.cookies["user_id"];
+  const id = req.session.user_id;
   const user = users[id];
   const templateVars = { 
     user
@@ -150,7 +158,7 @@ app.get("/login", (req, res) => {
 
 app.get("/urls", (req, res) => {
 
-  const id = req.cookies["user_id"];
+  const id = req.session.user_id;
   const user = users[id];
   
 
@@ -171,7 +179,7 @@ app.get("/urls", (req, res) => {
 });
 
 app.get("/register", (req, res) => {
-  const id = req.cookies["user_id"];
+  const id = req.session.user_id;
   const user = users[id];
   const templateVars = {
     user
@@ -180,7 +188,7 @@ app.get("/register", (req, res) => {
 });
 
 app.get("/urls/new", (req, res) => {
-  const id = req.cookies["user_id"];
+  const id = req.session.user_id;
   const user = users[id];
   const templateVars = { 
     user
@@ -194,7 +202,7 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.get("/urls/:shortURL", (req, res) => {
-  const id = req.cookies["user_id"];
+  const id = req.session.user_id;
   const user = users[id];
   const shortURL = req.params.shortURL
   const templateVars = { 
