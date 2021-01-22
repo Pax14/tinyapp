@@ -7,6 +7,14 @@ app.use(cookieParser());
 app.use(bodyParser.urlencoded({extended: true}));
 app.set("view engine", "ejs");
 
+const checkEmail = function check(email) {
+  for (let user in users) {
+    if (users[user].email === email){
+      return users[user].id;
+    }
+  }
+  return false;
+ }
 
 function generateRandomString() {
   let final = '';
@@ -36,8 +44,20 @@ const users = {
 }
 
 app.post("/login", (req, res) => {
-  // res.cookie('username', req.body.username);
-  res.redirect('/urls');
+  let email = req.body.email;
+  let password = req.body.password;
+  let check = checkEmail(email);
+
+  if (!check) {
+    return res.status(403).send('403 Forbidden');
+  } else {
+    if (password !== users[check].password){
+      return res.status(403).send('403 Forbidden');
+    } else {
+      res.cookie("user_id", check);
+      res.redirect('/urls');
+    }
+  }
 });
 
 app.post("/register", (req, res) => {
@@ -45,6 +65,12 @@ app.post("/register", (req, res) => {
     id: generateRandomString(),
     email: req.body.email,
     password: req.body.password
+  }
+  if (req.body.email === "" || req.body.password === "") {
+    return res.status(400).send('400 Bad Request');
+  }
+  if (checkEmail(req.body.email)) {
+    return res.status(400).send('400 Bad Request');
   }
   users[newUser.id] = newUser;
   res.cookie("user_id", newUser.id);
@@ -72,15 +98,22 @@ app.post("/urls", (req, res) => {
   res.redirect(`/urls/${short}`);
 });
 
+app.get("/login", (req, res) => {
+  const id = req.cookies["user_id"];
+  const user = users[id];
+  const templateVars = { 
+    user
+  };
+  res.render("urls_login", templateVars);
+});
+
 app.get("/urls", (req, res) => {
   const id = req.cookies["user_id"];
   const user = users[id];
   const templateVars = { 
     urls: urlDatabase, 
     user
-    // username: req.cookies["username"]
   };
-  // console.log(users[req.cookies["user_id"]])
   res.render("urls_index", templateVars);
 });
 
