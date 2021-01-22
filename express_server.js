@@ -5,48 +5,15 @@ const bodyParser = require("body-parser");
 // const cookieParser = require('cookie-parser');
 const cookieSession = require('cookie-session')
 const bcrypt = require('bcrypt');
+const { checkEmail, urlsForUser, generateRandomString } = require('./helper.js')
 // app.use(cookieParser());
 app.use(bodyParser.urlencoded({extended: true}));
 app.set("view engine", "ejs");
 app.use(cookieSession({
   name: 'user_id',
   keys: ['lalala'],
-
-  // Cookie Options
-  maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  maxAge: 24 * 60 * 60 * 1000 
 }))
-
-// checking if email exists, returns the ID if it does.
-const checkEmail = function check(email) {
-  for (let user in users) {
-    if (users[user].email === email){
-      return users[user].id;
-    }
-  }
-  return false;
-};
-
-// filtering URLs based on User ID to create a new object
-const urlsForUser = function(id) {
-  let final = {};
-  for (let i in urlDatabase) {
-    if (id === urlDatabase[i].userID) {
-      final[i] = urlDatabase[i];
-    }
-  }
-  return final;
-};
-
-// generate random user id on register as well as random shortURL
-function generateRandomString() {
-  let final = '';
-  const possibleChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxzy';
-  for (let i = 0; i < 6; i++) {
-    final += possibleChars.charAt(Math.floor(Math.random() * possibleChars.length));
-  }
-  return final;
-};
-
 
 const urlDatabase = {
   b6UTxQ: { longURL: "https://www.tsn.ca", userID: "aJ48lW" },
@@ -54,23 +21,23 @@ const urlDatabase = {
 };
 
 const users = { 
-  // "userRandomID": {
-  //   id: "userRandomID", 
-  //   email: "user@example.com", 
-  //   password: "1234"
-  // },
-  // "user2RandomID": {
-  //   id: "user2RandomID", 
-  //   email: "user2@example.com", 
-  //   password: "1234"
-  // }
+  "userRandomID": {
+    id: "userRandomID", 
+    email: "user@example.com", 
+    password: "1234"
+  },
+  "user2RandomID": {
+    id: "user2RandomID", 
+    email: "user2@example.com", 
+    password: "1234"
+  }
 };
 
 app.post("/login", (req, res) => {
 
   let email = req.body.email;
   let password = req.body.password;
-  let check = checkEmail(email);
+  let check = checkEmail(email, users);
 
   if (!check) {
     return res.status(403).send('403 Forbidden: Incorrect username and/or password');
@@ -85,15 +52,12 @@ app.post("/login", (req, res) => {
 });
 
 app.post("/register", (req, res) => {
-
-
   if (req.body.email === "" || req.body.password === "") {
     return res.status(400).send('400 Bad Request');
   }
-  if (checkEmail(req.body.email)) {
+  if (checkEmail(req.body.email, users)) {
     return res.status(400).send('400 Bad Request');
   }
-
   const stringPassword = req.body.password;
   const hash = bcrypt.hashSync(stringPassword, 10);
   const newUser = {
@@ -157,11 +121,8 @@ app.get("/login", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-
   const id = req.session.user_id;
   const user = users[id];
-  
-
   if (!user) {
     const templateVars = {
       urls: {},
@@ -169,7 +130,7 @@ app.get("/urls", (req, res) => {
     }
     res.render("urls_index", templateVars)
   } else {
-    const finalUrls = urlsForUser(id);
+    const finalUrls = urlsForUser(id, urlDatabase);
     const templateVars = { 
       urls: finalUrls, 
       user
@@ -220,21 +181,11 @@ app.get("/u/:shortURL", (req, res) => {
   res.redirect(longURL);
 });
 
+app.get("*", (req, res) => {
+  res.redirect("login")
+});
+
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
-});
-
-// semi useless stuff atm
-
-app.get("/", (req, res) => {
-  res.send("Hello!");
-});
-
-app.get("/urls.json", (req, res) => {
-  res.json(urlDatabase);
-});
-
-app.get("/hello", (req, res) => {
-  res.send("<html><body>Hello <b>World</b></body></html>\n");
 });
 
