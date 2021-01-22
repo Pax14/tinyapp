@@ -174,8 +174,17 @@ app.get("/u/:shortURL", (req, res) => {
   res.redirect(longURL);
 });
 
+app.get("/", (req, res) => {
+  const id = req.session.user_id;
+  if (id) {
+    res.redirect("/urls");
+  } else {
+    res.redirect("/login");
+  }
+});
+
 app.get("*", (req, res) => {
-  res.redirect("login");
+  res.redirect("/urls");
 });
 
 app.listen(PORT, () => {
