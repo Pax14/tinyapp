@@ -1,14 +1,14 @@
-// checking if email exists, returns the ID if it does.
-const checkEmail = function check(email, users) {
+// checking if email exists, returns the ID if it does, otherwise returns false
+const checkEmail = function(email, users) {
   for (let user in users) {
-    if (users[user].email === email){
+    if (users[user].email === email) {
       return users[user].id;
     }
   }
   return false;
 };
 
-// filtering URLs based on User ID to create a new object
+// filtering URLs based on User ID to create a new object with URLs tied to that specific User ID
 const urlsForUser = function(id, urlDatabase) {
   let final = {};
   for (let i in urlDatabase) {
@@ -33,4 +33,4 @@ module.exports = {
   checkEmail,
   urlsForUser,
   generateRandomString
-}
+};
