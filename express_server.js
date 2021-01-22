@@ -3,6 +3,7 @@ const app = express();
 const PORT = 8080;
 const bodyParser = require("body-parser");
 const cookieParser = require('cookie-parser');
+const bcrypt = require('bcrypt');
 app.use(cookieParser());
 app.use(bodyParser.urlencoded({extended: true}));
 app.set("view engine", "ejs");
@@ -38,22 +39,23 @@ function generateRandomString() {
   return final;
 };
 
+
 const urlDatabase = {
   b6UTxQ: { longURL: "https://www.tsn.ca", userID: "aJ48lW" },
   i3BoGr: { longURL: "https://www.google.ca", userID: "aJ48lW" }
 };
 
 const users = { 
-  "userRandomID": {
-    id: "userRandomID", 
-    email: "user@example.com", 
-    password: "1234"
-  },
- "user2RandomID": {
-    id: "user2RandomID", 
-    email: "user2@example.com", 
-    password: "1234"
-  }
+  // "userRandomID": {
+  //   id: "userRandomID", 
+  //   email: "user@example.com", 
+  //   password: "1234"
+  // },
+  // "user2RandomID": {
+  //   id: "user2RandomID", 
+  //   email: "user2@example.com", 
+  //   password: "1234"
+  // }
 };
 
 app.post("/login", (req, res) => {
@@ -65,27 +67,33 @@ app.post("/login", (req, res) => {
   if (!check) {
     return res.status(403).send('403 Forbidden: Incorrect username and/or password');
   } else {
-    if (password !== users[check].password){
-      return res.status(403).send('403 Forbidden: Incorrect username and/or password');
-    } else {
+    if (bcrypt.compareSync(password, users[check].password)) {
       res.cookie("user_id", check);
       res.redirect('/urls');
+    } else {
+      res.status(403).send('403 Forbidden: Incorrect username and/or password');
     }
   }
 });
 
 app.post("/register", (req, res) => {
-  const newUser = {
-    id: generateRandomString(),
-    email: req.body.email,
-    password: req.body.password
-  }
+
+
   if (req.body.email === "" || req.body.password === "") {
     return res.status(400).send('400 Bad Request');
   }
   if (checkEmail(req.body.email)) {
     return res.status(400).send('400 Bad Request');
   }
+
+  const stringPassword = req.body.password;
+  const hash = bcrypt.hashSync(stringPassword, 10);
+  const newUser = {
+    id: generateRandomString(),
+    email: req.body.email,
+    password: hash
+  }
+  console.log(newUser);
   users[newUser.id] = newUser;
   res.cookie("user_id", newUser.id);
   res.redirect('/urls');
@@ -104,14 +112,26 @@ app.post("/urls", (req, res) => {
 
 // update to make it so only users can edit their own links
 app.post("/urls/:shortURL", (req, res) => {
-  urlDatabase[req.params.shortURL].longURL = req.body.longURL; 
-  res.redirect('/urls');
+  const id = req.cookies["user_id"];
+  const shortURL = req.params.shortURL
+  if (id !== urlDatabase[shortURL].userID) {
+    return res.status(401).send('Not authorized: This is not your link!');
+  } else {
+    urlDatabase[req.params.shortURL].longURL = req.body.longURL; 
+    res.redirect('/urls');
+  }
 });
 
 // update to make it so only users can delete their own links
 app.post("/urls/:shortURL/delete", (req, res) => {
-  delete urlDatabase[req.params.shortURL];
-  res.redirect('/urls');
+  const id = req.cookies["user_id"];
+  const shortURL = req.params.shortURL
+  if (id !== urlDatabase[shortURL].userID) {
+    return res.status(401).send('Not authorized: This is not your link!');
+  } else {
+    delete urlDatabase[req.params.shortURL];
+    res.redirect('/urls');
+  }
 });
 
 app.post("/logout", (req, res) => {
