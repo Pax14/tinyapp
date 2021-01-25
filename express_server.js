@@ -147,7 +147,6 @@ app.get("/urls/new", (req, res) => {
   const templateVars = {
     user
   };
-
   if (!id) {
     res.redirect("/login");
   } else {
@@ -164,7 +163,11 @@ app.get("/urls/:shortURL", (req, res) => {
     longURL: urlDatabase[shortURL].longURL,
     user
   };
-  res.render("urls_show", templateVars);
+  if (id !== urlDatabase[shortURL].userID) {
+    return res.status(401).send('Not authorized: This is not your link!');
+  } else {
+    res.render("urls_show", templateVars);
+  }
 });
 
 app.get("/u/:shortURL", (req, res) => {
